@@ -1,0 +1,22 @@
+require("dotenv").config();
+const logger = require("./src/utils/logger");
+logger.setMode("debug");
+const express = require("express");
+const cors = require("cors");
+const app = express();
+const http = require("http");
+const server = http.createServer(app);
+
+require("./src/utils/socketIo").setIo(server);
+
+require("./src/services/signal");
+
+app.use(cors());
+
+// port setting
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  logger.info(
+    `Round Table signaling server start listen on port: ${PORT} - ${new Date()}`
+  );
+});
