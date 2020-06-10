@@ -8,7 +8,6 @@ const http = require("http");
 const server = http.createServer(app);
 
 require("./src/utils/socketIo").setIo(server);
-
 require("./src/services/signal");
 
 app.use(cors());
@@ -17,6 +16,6 @@ app.use(cors());
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   logger.info(
-    `Round Table signaling server start listen on port: ${PORT} - ${new Date()}`
+    `[SERVER] Round Table Server Start Listening On Port <${PORT}> - ${new Date()}`
   );
 });

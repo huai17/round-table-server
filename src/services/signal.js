@@ -10,34 +10,41 @@ const {
 } = require("./roundTable");
 
 io.on("connect", (socket) => {
-  logger.log(`Connection ${socket.id} - connect`);
+  logger.log(`[CONNECTION] Socket <${socket.id}> - Connect`);
 
   // error handle
   socket.on("error", (error) => {
-    logger.error(`Connection ${socket.id} - error:`, error);
+    logger.error(`[CONNECTION] Socket <${socket.id}> - Error: `, error);
     leave({ socket });
   });
 
   socket.on("disconnect", () => {
-    logger.log(`Connection ${socket.id} - disconnect`);
+    logger.log(`[CONNECTION] Socket <${socket.id}> - Disconnect`);
     leave({ socket });
   });
 
   socket.on("message", (message) => {
-    logger.log(`Connection ${socket.id} - message: ${message.id}`);
+    logger.log(`[CONNECTION] Socket <${socket.id}> - Message: ${message.id}`);
 
     switch (message.id) {
       case "reserve":
         // TODO: who can reserve table
-        reserve({ numberOfSeats: message.numberOfSeats || 10 })
-          .then((table) => {
+        reserve({
+          socket,
+          name: message.name || "Knight",
+          sdpOffer: message.sdpOffer,
+          numberOfSeats: message.numberOfSeats || 10,
+        })
+          .then(({ sdpAnswer, table }) => {
             socket.send({
               id: "reserveResponse",
               response: "success",
+              sdpAnswer,
               table,
             });
           })
           .catch((error) => {
+            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
             socket.send({
               id: "reserveResponse",
               response: "fail",
@@ -48,20 +55,14 @@ io.on("connect", (socket) => {
 
       case "release":
         // TODO: who can release table
-        release({ tableId: message.tableId }).then(() => {
-          socket.send({
-            id: "releaseResponse",
-            response: "success",
-            tableId: message.tableId,
-          });
-        });
+        release({ socket });
         break;
 
       case "join":
         join({
           socket,
           seatNumber: message.token,
-          name: message.name,
+          name: message.name || "Knight",
           sdpOffer: message.sdpOffer,
         })
           .then((sdpAnswer) => {
@@ -73,6 +74,7 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
+            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
             socket.send({
               id: "joinResponse",
               response: "fail",
@@ -97,6 +99,7 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
+            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
             socket.send({
               id: "receiveResponse",
               response: "fail",
