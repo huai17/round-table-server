@@ -16,7 +16,7 @@ const _getKurentoClient = () =>
 
 const getMediaObject = (id) =>
   new Promise(async (resolve, reject) => {
-    logger.log(`Get media object: ${id}`);
+    logger.log(`[KURENTO] Media Object <${id}> - Get`);
     try {
       const kurentoClient = await _getKurentoClient();
       kurentoClient.getMediaobjectById(id, (error, mediaObject) => {
@@ -30,7 +30,7 @@ const getMediaObject = (id) =>
 
 const createMediaPipeline = () =>
   new Promise(async (resolve, reject) => {
-    logger.log(`Create media pipeline`);
+    logger.log(`[KURENTO] Create Media Pipeline`);
     try {
       const kurentoClient = await _getKurentoClient();
       kurentoClient.create("MediaPipeline", (error, mediaPipeline) => {
@@ -55,23 +55,29 @@ const _createMediaObject = (mediaPipeline, type) =>
   });
 
 const createWebRtcEndPoint = (mediaPipeline) => {
-  logger.log(`Create webRtc endpoint of pipeline: ${mediaPipeline.id}`);
+  logger.log(
+    `[KURENTO] Media Pipline <${mediaPipeline.id}> - Create WebRtc Endpoint`
+  );
   return _createMediaObject(mediaPipeline, "WebRtcEndpoint");
 };
 
 const createComposite = (mediaPipeline) => {
-  logger.log(`Create composite hub of pipeline: ${mediaPipeline.id}`);
+  logger.log(
+    `[KURENTO] Media Pipline <${mediaPipeline.id}> - Create Composite Hub`
+  );
   return _createMediaObject(mediaPipeline, "Composite");
 };
 
 const createDispatcher = (mediaPipeline) => {
-  logger.log(`Create dispatcher(one to many) of pipeline: ${mediaPipeline.id}`);
+  logger.log(
+    `[KURENTO] Media Pipline <${mediaPipeline.id}> - Create Dispatcher(one to many) Hub`
+  );
   return _createMediaObject(mediaPipeline, "DispatcherOneToMany");
 };
 
 const createHubPort = (hub) =>
   new Promise(async (resolve, reject) => {
-    logger.log(`Create hub port of hub: ${hub.id}`);
+    logger.log(`[KURENTO] Hub <${hub.id}> - Create Hub Port`);
     try {
       hub.createHubPort((error, hubPort) => {
         if (error) return reject(error);

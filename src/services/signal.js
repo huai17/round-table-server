@@ -42,6 +42,7 @@ io.on("connect", (socket) => {
               response: "success",
               sdpAnswer,
               table,
+              self: table.king,
             });
           })
           .catch((error) => {
@@ -67,16 +68,17 @@ io.on("connect", (socket) => {
       case "join":
         join({
           socket,
-          seatNumber: message.token,
+          seatNumber: message.seatNumber,
           name: message.name || "Knight",
           sdpOffer: message.sdpOffer,
         })
-          .then((sdpAnswer) => {
+          .then(({ sdpAnswer, table }) => {
             socket.send({
               id: "joinResponse",
               response: "success",
-              token: message.token,
               sdpAnswer,
+              table,
+              self: table.knights[socket.id],
             });
           })
           .catch((error) => {
@@ -84,7 +86,6 @@ io.on("connect", (socket) => {
             socket.send({
               id: "joinResponse",
               response: "fail",
-              token: message.token,
               error,
             });
           });

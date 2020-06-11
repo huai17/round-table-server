@@ -1,25 +1,28 @@
 const logger = require("../utils/logger");
+const io = require("../utils/socketIo").getIo();
 
 const _knights = {};
 
 const getKnights = () => {
   logger.log(`[KNIGHT] Get All`);
+
   return _knights;
 };
 const getKnight = (socketId) => {
   logger.log(`[KNIGHT] Knight <${socketId}> - Get`);
+
   return _knights[socketId];
 };
 
 function Knight({ socket, name, table }) {
+  const self = this;
   logger.log(`[KNIGHT] Knight <${socket.id}> - Register`);
+
   if (_knights[socket.id])
     throw new Error(`[KNIGHT] Knight <${socket.id}> Already Exists`);
-  const self = this;
+
   self.id = socket.id;
-  self.socket = socket;
   self.name = name;
-  self.table = table;
   self.tableId = table.id;
   self.candidatesQueue = {};
   self.webRtcEndpoints = {};
@@ -29,11 +32,19 @@ function Knight({ socket, name, table }) {
   _knights[socket.id] = self;
 }
 
+Knight.prototype.send = function (message) {
+  const self = this;
+  logger.log(`[KNIGHT] Knight <${self.id}> - Send Message: ${message.id}`);
+
+  io.to(self.id).send(message);
+};
+
 Knight.prototype.setWebRtcEndpoint = function ({ source, webRtcEndpoint }) {
   const self = this;
   logger.log(
     `[KNIGHT] Knight <${self.id}> - Set "webRtcEndpoint" Of Source: ${source}`
   );
+
   self.webRtcEndpoints[source] = webRtcEndpoint;
   self.webRtcEndpointIds[source] = webRtcEndpoint.id;
 };
@@ -41,6 +52,7 @@ Knight.prototype.setWebRtcEndpoint = function ({ source, webRtcEndpoint }) {
 Knight.prototype.setHubPort = function ({ source, hubPort }) {
   const self = this;
   logger.log(`[KNIGHT] Knight <${self.id}> Set "hubPort" Of Source: ${source}`);
+
   self.hubPorts[source] = hubPort;
   self.hubPortIds[source] = hubPort.id;
 };
@@ -48,6 +60,7 @@ Knight.prototype.setHubPort = function ({ source, hubPort }) {
 Knight.prototype.unregister = function () {
   const self = this;
   logger.log(`[KNIGHT] Knight <${self.id}> - Unregister`);
+
   for (let source in self.webRtcEndpoints) {
     if (self.webRtcEndpoints[source]) {
       self.webRtcEndpoints[source].release();
@@ -69,15 +82,27 @@ Knight.prototype.unregister = function () {
   delete _knights[self.id];
 };
 
-Knight.prototype.toObject = function () {
+Knight.prototype.lean = function () {
   const self = this;
-  logger.log(`[KNIGHT] Knight <${self.id}> - To Object`);
+  logger.log(`[KNIGHT] Knight <${self.id}> - Lean`);
+
   return {
     id: self.id,
     name: self.name,
     tableId: self.tableId,
     webRtcEndpointIds: self.webRtcEndpointIds,
     hubPortIds: self.hubPortIds,
+  };
+};
+
+Knight.prototype.toObject = function () {
+  const self = this;
+  logger.log(`[KNIGHT] Knight <${self.id}> - To Object`);
+
+  return {
+    id: self.id,
+    name: self.name,
+    tableId: self.tableId,
   };
 };
 
