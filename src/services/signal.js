@@ -7,6 +7,7 @@ const {
   leave,
   receive,
   onIceCandidate,
+  changeSource,
 } = require("./roundTable");
 
 io.on("connect", (socket) => {
@@ -56,6 +57,11 @@ io.on("connect", (socket) => {
       case "release":
         // TODO: who can release table
         release({ socket });
+        break;
+
+      case "changeSource":
+        // TODO: who can release table
+        changeSource({ socket, source: message.source });
         break;
 
       case "join":

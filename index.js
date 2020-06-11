@@ -16,6 +16,6 @@ app.use(cors());
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   logger.info(
-    `[SERVER] Round Table Server Start Listening On Port <${PORT}> - ${new Date()}`
+    `[SERVER] Round Table Server Start Listening On Port ${PORT} - ${new Date()}`
   );
 });

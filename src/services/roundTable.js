@@ -192,7 +192,11 @@ const join = ({ socket, seatNumber, name, sdpOffer }) =>
           });
         }
       }
-      socket.send({ id: "existParticipants", participantIds });
+      socket.send({
+        id: "existParticipants",
+        participantIds,
+        hostId: table.host,
+      });
     } catch (error) {
       if (table) {
         table.leave({ socketId: socket.id });
@@ -324,7 +328,38 @@ const receive = ({ socket, source, sdpOffer }) =>
 
 const kickout = () => new Promise(async (resolve, reject) => {});
 
-const changeSource = () => new Promise(async (resolve, reject) => {});
+const changeSource = ({ socket, source }) =>
+  new Promise(async (resolve, reject) => {
+    logger.log(
+      `[ROUND TABLE] Socket <${socket.id}> - Change Source: ${source}`
+    );
+
+    const knight = getKnight(socket.id);
+    if (!knight) return resolve();
+    const table = knight.table;
+    if (!table || !table.dispatcher) return resolve();
+    if (!table.host || table.host !== knight.id) return resolve();
+
+    if (source === "me") {
+      if (!knight.hubPortIds["dispatcher"]) return resolve();
+      // set host as dispatcher source
+      table.dispatcher.setSource(knight.hubPortIds["dispatcher"]);
+    } else {
+      const target = getKnight(source);
+      if (!target || !target.hubPortIds["dispatcher"]) return resolve();
+
+      // set target as dispatcher source
+      table.dispatcher.setSource(target.hubPortIds["dispatcher"]);
+    }
+
+    for (let socketId of table.participants) {
+      io.to(socketId).send({
+        id: "changeSource",
+        source: source === "me" ? socket.id : source,
+      });
+    }
+    return resolve();
+  });
 
 const onIceCandidate = ({ socket, source, candidate: _candidate }) => {
   logger.log(
@@ -341,4 +376,12 @@ const onIceCandidate = ({ socket, source, candidate: _candidate }) => {
   }
 };
 
-module.exports = { reserve, release, join, leave, receive, onIceCandidate };
+module.exports = {
+  reserve,
+  release,
+  join,
+  leave,
+  receive,
+  onIceCandidate,
+  changeSource,
+};
