@@ -3,7 +3,7 @@ const logger = require("../utils/logger");
 const {
   createMediaPipeline,
   createWebRtcEndPoint,
-  createComposite,
+  // createComposite,
   createDispatcher,
   createHubPort,
 } = require("../utils/kurentoUtils");
@@ -16,7 +16,7 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
 
     let table = null;
     let mediaPipeline = null;
-    let composite = null;
+    // let composite = null;
     let dispatcher = null;
     let king = null;
     let webRtcEndpoint = null;
@@ -30,9 +30,9 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
       table.setMediaPipeline({ mediaPipeline });
       mediaPipeline = null;
 
-      composite = await createComposite(table.mediaPipeline);
-      table.setComposite({ composite });
-      composite = null;
+      // composite = await createComposite(table.mediaPipeline);
+      // table.setComposite({ composite });
+      // composite = null;
 
       dispatcher = await createDispatcher(table.mediaPipeline);
       table.setDispatcher({ dispatcher });
@@ -62,15 +62,15 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
       king.setWebRtcEndpoint({ source: "me", webRtcEndpoint });
       webRtcEndpoint = null;
 
-      hubPort = await createHubPort(table.composite);
-      king.setHubPort({ source: "composite", hubPort });
-      hubPort = null;
+      // hubPort = await createHubPort(table.composite);
+      // king.setHubPort({ source: "composite", hubPort });
+      // hubPort = null;
 
       hubPort = await createHubPort(table.dispatcher);
       king.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
-      king.webRtcEndpoints["me"].connect(king.hubPorts["composite"]);
+      // king.webRtcEndpoints["me"].connect(king.hubPorts["composite"]);
       king.webRtcEndpoints["me"].connect(king.hubPorts["dispatcher"]);
       king.webRtcEndpoints["me"].processOffer(sdpOffer, (error, sdpAnswer) => {
         if (error) return reject(error);
@@ -83,7 +83,7 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
       // set host as dispatcher source
       table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
     } catch (error) {
-      if (composite) composite.release();
+      // if (composite) composite.release();
       if (dispatcher) dispatcher.release();
       if (mediaPipeline) mediaPipeline.release();
       if (webRtcEndpoint) webRtcEndpoint.release();
@@ -153,15 +153,15 @@ const join = ({ socket, seatNumber, name, sdpOffer }) =>
       knight.setWebRtcEndpoint({ source: "me", webRtcEndpoint });
       webRtcEndpoint = null;
 
-      hubPort = await createHubPort(table.composite);
-      knight.setHubPort({ source: "composite", hubPort });
-      hubPort = null;
+      // hubPort = await createHubPort(table.composite);
+      // knight.setHubPort({ source: "composite", hubPort });
+      // hubPort = null;
 
       hubPort = await createHubPort(table.dispatcher);
       knight.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
-      knight.webRtcEndpoints["me"].connect(knight.hubPorts["composite"]);
+      // knight.webRtcEndpoints["me"].connect(knight.hubPorts["composite"]);
       knight.webRtcEndpoints["me"].connect(knight.hubPorts["dispatcher"]);
       knight.webRtcEndpoints["me"].processOffer(
         sdpOffer,
@@ -273,12 +273,12 @@ const receive = ({ socket, source, sdpOffer }) =>
 
       let target = null;
       switch (source) {
-        case "composite":
-          if (knight.hubPorts[source]) {
-            knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);
-            target = true;
-          } else target = false;
-          break;
+        // case "composite":
+        //   if (knight.hubPorts[source]) {
+        //     knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);
+        //     target = true;
+        //   } else target = false;
+        //   break;
         case "dispatcher":
           if (knight.hubPorts[source]) {
             knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);

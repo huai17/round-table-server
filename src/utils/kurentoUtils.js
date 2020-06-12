@@ -61,12 +61,12 @@ const createWebRtcEndPoint = (mediaPipeline) => {
   return _createMediaObject(mediaPipeline, "WebRtcEndpoint");
 };
 
-const createComposite = (mediaPipeline) => {
-  logger.log(
-    `[KURENTO] Media Pipline <${mediaPipeline.id}> - Create Composite Hub`
-  );
-  return _createMediaObject(mediaPipeline, "Composite");
-};
+// const createComposite = (mediaPipeline) => {
+//   logger.log(
+//     `[KURENTO] Media Pipline <${mediaPipeline.id}> - Create Composite Hub`
+//   );
+//   return _createMediaObject(mediaPipeline, "Composite");
+// };
 
 const createDispatcher = (mediaPipeline) => {
   logger.log(
@@ -92,7 +92,7 @@ module.exports = {
   getMediaObject,
   createMediaPipeline,
   createWebRtcEndPoint,
-  createComposite,
+  // createComposite,
   createDispatcher,
   createHubPort,
 };

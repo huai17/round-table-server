@@ -54,8 +54,8 @@ function Table({ numberOfSeats = 10 }) {
   self.seats = {};
   self.mediaPipeline = null;
   self.mediaPipelineId = null;
-  self.composite = null;
-  self.compositeId = null;
+  // self.composite = null;
+  // self.compositeId = null;
   self.dispatcher = null;
   self.dispatcherId = null;
   _tables[self.id] = self;
@@ -70,13 +70,13 @@ Table.prototype.setMediaPipeline = function ({ mediaPipeline }) {
   self.mediaPipelineId = mediaPipeline.id;
 };
 
-Table.prototype.setComposite = function ({ composite }) {
-  const self = this;
-  logger.log(`[TABLE] Table <${self.id}> - Set "composite"`);
+// Table.prototype.setComposite = function ({ composite }) {
+//   const self = this;
+//   logger.log(`[TABLE] Table <${self.id}> - Set "composite"`);
 
-  self.composite = composite;
-  self.compositeId = composite.id;
-};
+//   self.composite = composite;
+//   self.compositeId = composite.id;
+// };
 
 Table.prototype.setDispatcher = function ({ dispatcher }) {
   const self = this;
@@ -152,11 +152,11 @@ Table.prototype.release = function () {
     self.mediaPipeline = null;
     self.mediaPipelineId = null;
   }
-  if (self.composite) {
-    self.composite.release();
-    self.composite = null;
-    self.compositeId = null;
-  }
+  // if (self.composite) {
+  //   self.composite.release();
+  //   self.composite = null;
+  //   self.compositeId = null;
+  // }
   if (self.dispatcher) {
     self.dispatcher.release();
     self.dispatcher = null;
@@ -177,7 +177,7 @@ Table.prototype.lean = function () {
     numberOfSeats: self.numberOfSeats,
     seats: self.seats,
     mediaPipelineId: self.mediaPipelineId,
-    compositeId: self.compositeId,
+    // compositeId: self.compositeId,
     dispatcherId: self.dispatcherId,
   };
 };
