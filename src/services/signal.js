@@ -2,12 +2,14 @@ const io = require("../utils/socketIo").getIo();
 const logger = require("../utils/logger");
 const {
   reserve,
-  release,
+  // release,
   join,
   leave,
   receive,
   onIceCandidate,
   changeSource,
+  generateSeats,
+  kickout,
 } = require("./roundTable");
 
 io.on("connect", (socket) => {
@@ -55,14 +57,24 @@ io.on("connect", (socket) => {
           });
         break;
 
-      case "release":
-        // TODO: who can release table
-        release({ socket });
-        break;
+      // case "release":
+      //   // TODO: who can release table
+      //   release({ socket });
+      //   break;
 
       case "changeSource":
         // TODO: who can release table
         changeSource({ socket, source: message.source });
+        break;
+
+      case "generateSeats":
+        // TODO: who can release table
+        generateSeats({ socket, numberOfSeats: message.numberOfSeats || 1 });
+        break;
+
+      case "kickout":
+        // TODO: who can release table
+        kickout({ socket, seatNumber: message.seatNumber });
         break;
 
       case "join":

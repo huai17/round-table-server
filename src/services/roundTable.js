@@ -177,10 +177,17 @@ const join = ({ socket, seatNumber, name, sdpOffer }) =>
       for (let socketId in table.knights) {
         if (socketId !== socket.id) {
           const listener = getKnight(socketId);
-          listener.send({
-            id: "knightJoined",
-            knight: knight.toObject(),
-          });
+          if (listener.id === table.king.id)
+            listener.send({
+              id: "knightJoined",
+              knight: knight.toObject(),
+              seatNumber,
+            });
+          else
+            listener.send({
+              id: "knightJoined",
+              knight: knight.toObject(),
+            });
         }
       }
     } catch (error) {
@@ -205,7 +212,7 @@ const leave = ({ socket }) =>
         await release({ socket });
         return resolve();
       }
-      table.leave({ socketId: socket.id });
+      const seatNumber = table.leave({ socketId: socket.id });
       for (let socketId in table.knights) {
         const listener = getKnight(socketId);
         if (listener) {
@@ -214,10 +221,18 @@ const leave = ({ socket }) =>
             delete listener.webRtcEndpoints[socket.id];
             delete listener.webRtcEndpointIds[socket.id];
           }
-          listener.send({
-            id: "knightLeft",
-            knight: knight.toObject(),
-          });
+          if (listener.id === table.king.id)
+            listener.send({
+              id: "knightLeft",
+              knight: knight.toObject(),
+              seatNumber,
+              isRemoved: false,
+            });
+          else
+            listener.send({
+              id: "knightLeft",
+              knight: knight.toObject(),
+            });
         }
       }
     }
@@ -341,7 +356,77 @@ const changeSource = ({ socket, source }) =>
     return resolve();
   });
 
-const kickout = () => new Promise(async (resolve, reject) => {});
+const generateSeats = ({ socket, numberOfSeats = 1 }) =>
+  new Promise(async (resolve, reject) => {
+    logger.log(`[ROUND TABLE] Socket <${socket.id}> - Generate Seats`);
+
+    const king = getKnight(socket.id);
+    if (!king) return resolve();
+    const table = getTable(king.tableId);
+    if (!table || !table.dispatcher || !table.king || table.king.id !== king.id)
+      return resolve();
+
+    table.generateSeats(numberOfSeats);
+
+    king.send({
+      id: "seatsUpdated",
+      seats: table.seats,
+      numberOfSeats: table.numberOfSeats,
+    });
+
+    return resolve();
+  });
+
+const kickout = ({ socket, seatNumber }) =>
+  new Promise(async (resolve, reject) => {
+    logger.log(`[ROUND TABLE] Socket <${socket.id}> - Generate Seats`);
+
+    const king = getKnight(socket.id);
+    if (!king) return resolve();
+    const table = getTable(king.tableId);
+    if (!table || !table.dispatcher || !table.king || table.king.id !== king.id)
+      return resolve();
+
+    if (
+      !table.seats[seatNumber] ||
+      table.seats[seatNumber] === "available" ||
+      table.seats[seatNumber] === "removed"
+    )
+      return resolve();
+
+    const knight = getKnight(table.seats[seatNumber]);
+    if (!knight) return resolve();
+
+    table.leave({ socketId: knight.id });
+    table.removeSeat({ seatNumber });
+    for (let socketId in table.knights) {
+      const listener = getKnight(socketId);
+      if (listener) {
+        if (listener.webRtcEndpoints[knight.id]) {
+          listener.webRtcEndpoints[knight.id].release();
+          delete listener.webRtcEndpoints[knight.id];
+          delete listener.webRtcEndpointIds[knight.id];
+        }
+
+        if (listener.id === table.king.id)
+          listener.send({
+            id: "knightLeft",
+            knight: knight.toObject(),
+            seatNumber,
+            isRemoved: true,
+          });
+        else
+          listener.send({
+            id: "knightLeft",
+            knight: knight.toObject(),
+          });
+      }
+    }
+
+    knight.send({ id: "stopCommunication" });
+    knight.unregister();
+    return resolve();
+  });
 
 const onIceCandidate = ({ socket, source, candidate: _candidate }) => {
   logger.log(
@@ -367,4 +452,6 @@ module.exports = {
   receive,
   onIceCandidate,
   changeSource,
+  generateSeats,
+  kickout,
 };

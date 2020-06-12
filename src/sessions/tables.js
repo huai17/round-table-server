@@ -21,33 +21,45 @@ const parseSeatNumber = (seatNumber) => {
   return Buffer.from(seatNumber, "base64").toString("ascii").split("#");
 };
 
-function Table({ numberOfSeats = 10 }) {
-  const self = this;
+const _generateId = () => {
   let tableId = "";
   do {
     tableId = crypto.randomBytes(12).toString("base64").replace(/=/g, "");
   } while (_tables[tableId]);
-  logger.log(`[TABLE] Table <${tableId}> - Reserve`);
+  return tableId;
+};
 
-  self.id = tableId;
+function _generateSeat() {
+  const self = this;
+
+  let seatNumber = "";
+  do {
+    seatNumber = Buffer.from(`${self.id}#${Math.random().toFixed(4).slice(2)}`)
+      .toString("base64")
+      .replace(/=/g, "");
+  } while (self.seats[seatNumber]);
+  self.seats[seatNumber] = "available";
+  self.numberOfSeats++;
+}
+
+function Table({ numberOfSeats = 10 }) {
+  const self = this;
+  self.id = _generateId();
+  logger.log(`[TABLE] Table <${self.id}> - Reserve`);
+
   self.king = null;
   self.knights = {};
   self.source = null;
-  self.numberOfSeats = numberOfSeats;
-  self.seats = new Set();
+  self.numberOfSeats = 0;
+  self.seats = {};
   self.mediaPipeline = null;
   self.mediaPipelineId = null;
   self.composite = null;
   self.compositeId = null;
   self.dispatcher = null;
   self.dispatcherId = null;
-  for (let i = 0; i < numberOfSeats; i++) {
-    const seatNumber = Buffer.from(`${tableId}#${i}`)
-      .toString("base64")
-      .replace(/=/g, "");
-    self.seats.add(seatNumber);
-  }
-  _tables[tableId] = self;
+  _tables[self.id] = self;
+  self.generateSeats(numberOfSeats);
 }
 
 Table.prototype.setMediaPipeline = function ({ mediaPipeline }) {
@@ -74,6 +86,22 @@ Table.prototype.setDispatcher = function ({ dispatcher }) {
   self.dispatcherId = dispatcher.id;
 };
 
+Table.prototype.generateSeats = function (numberOfSeats = 1) {
+  const self = this;
+  logger.log(`[TABLE] Table <${self.id}> - Generate ${numberOfSeats} Seat(s)`);
+
+  for (let i = 0; i < numberOfSeats; i++) {
+    _generateSeat.call(self);
+  }
+};
+
+Table.prototype.removeSeat = function ({ seatNumber }) {
+  const self = this;
+  logger.log(`[TABLE] Table <${self.id}> - Remove Seat <${seatNumber}>`);
+
+  self.seats[seatNumber] = "removed";
+};
+
 Table.prototype.changeSource = function ({ source }) {
   const self = this;
   logger.log(`[TABLE] Table <${self.id}> - Change Source`);
@@ -92,9 +120,10 @@ Table.prototype.join = function ({ knight, king, seatNumber }) {
   } else {
     logger.log(`[TABLE] Table <${self.id}> - Knight <${knight.id}> Joined`);
 
-    if (!self.seats.has(seatNumber)) throw new Error("Invalid seatNumber");
-    self.knights[knight.id] = { id: knight.id, name: knight.name };
-    self.seats.delete(seatNumber);
+    if (!self.seats[seatNumber] || self.seats[seatNumber] !== "available")
+      throw new Error("Invalid seatNumber");
+    self.knights[knight.id] = { id: knight.id, name: knight.name, seatNumber };
+    self.seats[seatNumber] = knight.id;
   }
 };
 
@@ -102,7 +131,16 @@ Table.prototype.leave = function ({ socketId }) {
   const self = this;
   logger.log(`[TABLE] Table <${self.id}> - Knight <${socketId}> Left`);
 
+  if (!self.knights[socketId] || !self.knights[socketId].seatNumber) return;
+
+  const seatNumber = self.knights[socketId].seatNumber;
+
+  if (self.seats[seatNumber] === self.knights[socketId].id)
+    self.seats[seatNumber] = "available";
+
   delete self.knights[socketId];
+
+  return seatNumber;
 };
 
 Table.prototype.release = function () {
@@ -137,7 +175,7 @@ Table.prototype.lean = function () {
     knights: self.knights,
     source: self.source,
     numberOfSeats: self.numberOfSeats,
-    seats: Array.from(self.seats),
+    seats: self.seats,
     mediaPipelineId: self.mediaPipelineId,
     compositeId: self.compositeId,
     dispatcherId: self.dispatcherId,
@@ -155,7 +193,7 @@ Table.prototype.toObject = function (withSeats = true) {
       knights: self.knights,
       source: self.source,
       numberOfSeats: self.numberOfSeats,
-      seats: Array.from(self.seats),
+      seats: self.seats,
     };
 
   return {
