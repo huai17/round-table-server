@@ -122,17 +122,18 @@ const join = ({ socket, seatNumber, name }) =>
       return resolve(table.toObject(false));
     } catch (error) {
       if (table) {
-        if (table.source === socket.id) {
-          if (table.king && king.hubPortIds["dispatcher"]) {
+        if (table.source === socket.id && table.king) {
+          const king = getKnight(table.king.id);
+          if (king && king.hubPortIds["dispatcher"]) {
             // set host as dispatcher source
-            table.dispatcher.setSource(table.king.hubPortIds["dispatcher"]);
-            table.changeSource(table.king.id);
+            table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
+            table.changeSource(king.id);
 
             for (let socketId in table.knights) {
               const listener = getKnight(socketId);
               listener.send({
                 id: "changeSource",
-                source: table.king.id,
+                source: king.id,
               });
             }
           }
@@ -159,17 +160,18 @@ const leave = ({ socket }) =>
         return resolve();
       }
 
-      if (table.source === socket.id) {
-        if (table.king && table.king.hubPortIds["dispatcher"]) {
+      if (table.source === socket.id && table.king) {
+        const king = getKnight(table.king.id);
+        if (king && king.hubPortIds["dispatcher"]) {
           // set host as dispatcher source
-          table.dispatcher.setSource(table.king.hubPortIds["dispatcher"]);
-          table.changeSource(table.king.id);
+          table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
+          table.changeSource(king.id);
 
           for (let socketId in table.knights) {
             const knight = getKnight(socketId);
             knight.send({
               id: "changeSource",
-              source: table.king.id,
+              source: king.id,
             });
           }
         }
