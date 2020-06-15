@@ -121,25 +121,7 @@ const join = ({ socket, seatNumber, name }) =>
 
       return resolve(table.toObject(false));
     } catch (error) {
-      if (table) {
-        if (table.source === socket.id && table.king) {
-          const king = getKnight(table.king.id);
-          if (king && king.hubPortIds["dispatcher"]) {
-            // set host as dispatcher source
-            table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
-            table.changeSource(king.id);
-
-            for (let socketId in table.knights) {
-              const listener = getKnight(socketId);
-              listener.send({
-                id: "changeSource",
-                source: king.id,
-              });
-            }
-          }
-        }
-        table.leave({ socketId: socket.id });
-      }
+      if (table) table.leave({ socketId: socket.id });
       if (knight) knight.unregister();
       if (hubPort) hubPort.release();
 
@@ -160,26 +142,28 @@ const leave = ({ socket }) =>
         return resolve();
       }
 
+      let sourceChanged = false;
       if (table.source === socket.id && table.king) {
         const king = getKnight(table.king.id);
+
         if (king && king.hubPortIds["dispatcher"]) {
           // set host as dispatcher source
           table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
           table.changeSource(king.id);
 
-          for (let socketId in table.knights) {
-            const knight = getKnight(socketId);
-            knight.send({
-              id: "changeSource",
-              source: king.id,
-            });
-          }
+          sourceChanged = true;
         }
       }
       table.leave({ socketId: socket.id });
       for (let socketId in table.knights) {
         const listener = getKnight(socketId);
         if (listener) {
+          if (sourceChanged)
+            listener.send({
+              id: "changeSource",
+              source: table.king.id,
+            });
+
           if (listener.webRtcEndpoints[socket.id]) {
             listener.webRtcEndpoints[socket.id].release();
             delete listener.webRtcEndpoints[socket.id];
@@ -392,26 +376,25 @@ const kickout = ({ socket, seatNumber }) =>
     const knight = getKnight(table.seats[seatNumber]);
     if (!knight) return resolve();
 
-    if (table.source === knight.id) {
-      if (king.hubPortIds["dispatcher"]) {
-        // set host as dispatcher source
-        table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
-        table.changeSource(king.id);
+    let sourceChanged = false;
+    if (table.source === knight.id && king.hubPortIds["dispatcher"]) {
+      // set host as dispatcher source
+      table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
+      table.changeSource(king.id);
 
-        for (let socketId in table.knights) {
-          const knight = getKnight(socketId);
-          knight.send({
-            id: "changeSource",
-            source: king.id,
-          });
-        }
-      }
+      sourceChanged = true;
     }
     table.leave({ socketId: knight.id });
     table.removeSeat({ seatNumber });
     for (let socketId in table.knights) {
       const listener = getKnight(socketId);
       if (listener) {
+        if (sourceChanged)
+          listener.send({
+            id: "changeSource",
+            source: king.id,
+          });
+
         if (listener.webRtcEndpoints[knight.id]) {
           listener.webRtcEndpoints[knight.id].release();
           delete listener.webRtcEndpoints[knight.id];

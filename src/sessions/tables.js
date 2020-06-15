@@ -102,7 +102,7 @@ Table.prototype.removeSeat = function ({ seatNumber }) {
   self.seats[seatNumber] = "removed";
 };
 
-Table.prototype.changeSource = function ({ source }) {
+Table.prototype.changeSource = function (source) {
   const self = this;
   logger.log(`[TABLE] Table <${self.id}> - Change Source`);
 
