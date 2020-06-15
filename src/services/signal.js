@@ -39,20 +39,17 @@ io.on("connect", (socket) => {
         })
           .then((table) => {
             socket.send({
-              id: "reserveResponse",
-              response: "success",
+              id: "startCommunication",
               table,
               self: table.king,
             });
           })
           .catch((error) => {
-            logger.error(
-              `[Error] Socket <${socket.id}> Reserve Response - Error: `
-            );
+            logger.error(`[Error] Socket <${socket.id}> Reserve Error: `);
             logger.error(error);
             socket.send({
-              id: "reserveResponse",
-              response: "fail",
+              id: "error",
+              message: `Fail to reserve table`,
               error,
             });
           });
@@ -71,20 +68,17 @@ io.on("connect", (socket) => {
         })
           .then((table) => {
             socket.send({
-              id: "joinResponse",
-              response: "success",
+              id: "startCommunication",
               table,
               self: table.knights[socket.id],
             });
           })
           .catch((error) => {
-            logger.error(
-              `[Error] Socket <${socket.id}> Join Response - Error: `
-            );
+            logger.error(`[Error] Socket <${socket.id}> Join Error: `);
             logger.error(error);
             socket.send({
-              id: "joinResponse",
-              response: "fail",
+              id: "error",
+              message: `Fail to join table`,
               error,
             });
           });
@@ -105,9 +99,7 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
-            logger.error(
-              `[Error] Socket <${socket.id}> Connect Response - Error: `
-            );
+            logger.error(`[Error] Socket <${socket.id}> Connect Error: `);
             logger.error(error);
             socket.send({
               id: "connectResponse",
