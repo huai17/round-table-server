@@ -109,7 +109,7 @@ Table.prototype.changeSource = function ({ source }) {
   self.source = source;
 };
 
-Table.prototype.join = function ({ knight, king, seatNumber }) {
+Table.prototype.join = function ({ knight, king }) {
   const self = this;
   if (king) {
     logger.log(`[TABLE] Table <${self.id}> - King <${king.id}> Joined`);
@@ -117,13 +117,22 @@ Table.prototype.join = function ({ knight, king, seatNumber }) {
     self.king = { id: king.id, name: king.name };
     self.knights[king.id] = { id: king.id, name: king.name };
     self.source = king.id;
-  } else {
+  } else if (knight) {
     logger.log(`[TABLE] Table <${self.id}> - Knight <${knight.id}> Joined`);
 
-    if (!self.seats[seatNumber] || self.seats[seatNumber] !== "available")
+    if (
+      !self.seats[knight.seatNumber] ||
+      self.seats[knight.seatNumber] !== "available"
+    )
       throw new Error("Invalid seatNumber");
-    self.knights[knight.id] = { id: knight.id, name: knight.name, seatNumber };
-    self.seats[seatNumber] = knight.id;
+    self.knights[knight.id] = {
+      id: knight.id,
+      name: knight.name,
+      seatNumber: knight.seatNumber,
+    };
+    self.seats[knight.seatNumber] = knight.id;
+  } else {
+    throw new Error("No member joined");
   }
 };
 
@@ -139,8 +148,6 @@ Table.prototype.leave = function ({ socketId }) {
     self.seats[seatNumber] = "available";
 
   delete self.knights[socketId];
-
-  return seatNumber;
 };
 
 Table.prototype.release = function () {

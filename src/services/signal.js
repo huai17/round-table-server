@@ -5,11 +5,11 @@ const {
   // release,
   join,
   leave,
-  receive,
-  onIceCandidate,
+  connect,
   changeSource,
   generateSeats,
   kickout,
+  onIceCandidate,
 } = require("./roundTable");
 
 io.on("connect", (socket) => {
@@ -35,20 +35,21 @@ io.on("connect", (socket) => {
         reserve({
           socket,
           name: message.name || "Knight",
-          sdpOffer: message.sdpOffer,
           numberOfSeats: message.numberOfSeats || 10,
         })
-          .then(({ sdpAnswer, table }) => {
+          .then((table) => {
             socket.send({
               id: "reserveResponse",
               response: "success",
-              sdpAnswer,
               table,
               self: table.king,
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
+            logger.error(
+              `[Error] Socket <${socket.id}> Reserve Response - Error: `
+            );
+            logger.error(error);
             socket.send({
               id: "reserveResponse",
               response: "fail",
@@ -62,39 +63,25 @@ io.on("connect", (socket) => {
       //   release({ socket });
       //   break;
 
-      case "changeSource":
-        // TODO: who can release table
-        changeSource({ socket, source: message.source });
-        break;
-
-      case "generateSeats":
-        // TODO: who can release table
-        generateSeats({ socket, numberOfSeats: message.numberOfSeats || 1 });
-        break;
-
-      case "kickout":
-        // TODO: who can release table
-        kickout({ socket, seatNumber: message.seatNumber });
-        break;
-
       case "join":
         join({
           socket,
-          seatNumber: message.seatNumber,
           name: message.name || "Knight",
-          sdpOffer: message.sdpOffer,
+          seatNumber: message.seatNumber,
         })
-          .then(({ sdpAnswer, table }) => {
+          .then((table) => {
             socket.send({
               id: "joinResponse",
               response: "success",
-              sdpAnswer,
               table,
               self: table.knights[socket.id],
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
+            logger.error(
+              `[Error] Socket <${socket.id}> Join Response - Error: `
+            );
+            logger.error(error);
             socket.send({
               id: "joinResponse",
               response: "fail",
@@ -107,25 +94,43 @@ io.on("connect", (socket) => {
         leave({ socket });
         break;
 
-      case "receive":
-        receive({ socket, source: message.source, sdpOffer: message.sdpOffer })
+      case "connect":
+        connect({ socket, source: message.source, sdpOffer: message.sdpOffer })
           .then((sdpAnswer) => {
             socket.send({
-              id: "receiveResponse",
+              id: "connectResponse",
               response: "success",
               source: message.source,
               sdpAnswer,
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> - Error: `, error);
+            logger.error(
+              `[Error] Socket <${socket.id}> Connect Response - Error: `
+            );
+            logger.error(error);
             socket.send({
-              id: "receiveResponse",
+              id: "connectResponse",
               response: "fail",
               source: message.source,
               error,
             });
           });
+        break;
+
+      case "changeSource":
+        // TODO: who can changeSource
+        changeSource({ socket, source: message.source });
+        break;
+
+      case "generateSeats":
+        // TODO: who can generateSeats
+        generateSeats({ socket, numberOfSeats: message.numberOfSeats || 1 });
+        break;
+
+      case "kickout":
+        // TODO: who can kickout
+        kickout({ socket, seatNumber: message.seatNumber });
         break;
 
       case "onIceCandidate":

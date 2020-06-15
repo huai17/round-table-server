@@ -10,7 +10,7 @@ const {
 const { Knight, getKnight } = require("../sessions/knights");
 const { Table, getTable, parseSeatNumber } = require("../sessions/tables");
 
-const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
+const reserve = ({ socket, name = "Knight", numberOfSeats = 10 }) =>
   new Promise(async (resolve, reject) => {
     logger.log(`[ROUND TABLE] Socket <${socket.id}> - Reserve Table`);
 
@@ -19,7 +19,6 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
     // let composite = null;
     let dispatcher = null;
     let king = null;
-    let webRtcEndpoint = null;
     let hubPort = null;
 
     try {
@@ -46,22 +45,6 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
       });
       table.join({ king });
 
-      webRtcEndpoint = await createWebRtcEndPoint(table.mediaPipeline);
-      if (king.candidatesQueue["me"]) {
-        while (king.candidatesQueue["me"].length) {
-          const candidate = king.candidatesQueue["me"].shift();
-          webRtcEndpoint.addIceCandidate(candidate);
-        }
-      }
-      webRtcEndpoint.on("OnIceCandidate", (event) => {
-        const candidate = kurento.getComplexType("IceCandidate")(
-          event.candidate
-        );
-        king.send({ id: "iceCandidate", source: "me", candidate });
-      });
-      king.setWebRtcEndpoint({ source: "me", webRtcEndpoint });
-      webRtcEndpoint = null;
-
       // hubPort = await createHubPort(table.composite);
       // king.setHubPort({ source: "composite", hubPort });
       // hubPort = null;
@@ -70,23 +53,14 @@ const reserve = ({ socket, name = "Knight", sdpOffer, numberOfSeats = 10 }) =>
       king.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
-      // king.webRtcEndpoints["me"].connect(king.hubPorts["composite"]);
-      king.webRtcEndpoints["me"].connect(king.hubPorts["dispatcher"]);
-      king.webRtcEndpoints["me"].processOffer(sdpOffer, (error, sdpAnswer) => {
-        if (error) return reject(error);
-        return resolve({ sdpAnswer, table: table.toObject() });
-      });
-      king.webRtcEndpoints["me"].gatherCandidates((error) => {
-        if (error) return reject(error);
-      });
-
       // set host as dispatcher source
       table.dispatcher.setSource(king.hubPortIds["dispatcher"]);
+
+      return resolve(table.toObject(true));
     } catch (error) {
       // if (composite) composite.release();
       if (dispatcher) dispatcher.release();
       if (mediaPipeline) mediaPipeline.release();
-      if (webRtcEndpoint) webRtcEndpoint.release();
       if (hubPort) hubPort.release();
       if (table) table.release();
       if (king) king.unregister();
@@ -115,13 +89,12 @@ const release = ({ socket }) =>
     return resolve();
   });
 
-const join = ({ socket, seatNumber, name, sdpOffer }) =>
+const join = ({ socket, seatNumber, name }) =>
   new Promise(async (resolve, reject) => {
     logger.log(`[ROUND TABLE] Socket <${socket.id}> - Join Table`);
 
     let table = null;
     let knight = null;
-    let webRtcEndpoint = null;
     let hubPort = null;
 
     try {
@@ -134,66 +107,22 @@ const join = ({ socket, seatNumber, name, sdpOffer }) =>
         socket,
         name: `${name}#${serialNumber}`,
         table,
+        seatNumber,
       });
-      table.join({ knight, seatNumber });
-
-      webRtcEndpoint = await createWebRtcEndPoint(table.mediaPipeline);
-      if (knight.candidatesQueue["me"]) {
-        while (knight.candidatesQueue["me"].length) {
-          const candidate = knight.candidatesQueue["me"].shift();
-          webRtcEndpoint.addIceCandidate(candidate);
-        }
-      }
-      webRtcEndpoint.on("OnIceCandidate", (event) => {
-        const candidate = kurento.getComplexType("IceCandidate")(
-          event.candidate
-        );
-        knight.send({ id: "iceCandidate", source: "me", candidate });
-      });
-      knight.setWebRtcEndpoint({ source: "me", webRtcEndpoint });
-      webRtcEndpoint = null;
+      table.join({ knight });
 
       // hubPort = await createHubPort(table.composite);
-      // knight.setHubPort({ source: "composite", hubPort });
+      // king.setHubPort({ source: "composite", hubPort });
       // hubPort = null;
 
       hubPort = await createHubPort(table.dispatcher);
       knight.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
-      // knight.webRtcEndpoints["me"].connect(knight.hubPorts["composite"]);
-      knight.webRtcEndpoints["me"].connect(knight.hubPorts["dispatcher"]);
-      knight.webRtcEndpoints["me"].processOffer(
-        sdpOffer,
-        (error, sdpAnswer) => {
-          if (error) return reject(error);
-          return resolve({ sdpAnswer, table: table.toObject(false) });
-        }
-      );
-      knight.webRtcEndpoints["me"].gatherCandidates((error) => {
-        if (error) return reject(error);
-      });
-
-      for (let socketId in table.knights) {
-        if (socketId !== socket.id) {
-          const listener = getKnight(socketId);
-          if (listener.id === table.king.id)
-            listener.send({
-              id: "knightJoined",
-              knight: knight.toObject(),
-              seatNumber,
-            });
-          else
-            listener.send({
-              id: "knightJoined",
-              knight: knight.toObject(),
-            });
-        }
-      }
+      return resolve(table.toObject(false));
     } catch (error) {
       if (table) table.leave({ socketId: socket.id });
       if (knight) knight.unregister();
-      if (webRtcEndpoint) webRtcEndpoint.release();
       if (hubPort) hubPort.release();
 
       return reject(error);
@@ -212,7 +141,7 @@ const leave = ({ socket }) =>
         await release({ socket });
         return resolve();
       }
-      const seatNumber = table.leave({ socketId: socket.id });
+      table.leave({ socketId: socket.id });
       for (let socketId in table.knights) {
         const listener = getKnight(socketId);
         if (listener) {
@@ -225,7 +154,7 @@ const leave = ({ socket }) =>
             listener.send({
               id: "knightLeft",
               knight: knight.toObject(),
-              seatNumber,
+              seatNumber: knight.seatNumber,
               isRemoved: false,
             });
           else
@@ -241,10 +170,10 @@ const leave = ({ socket }) =>
     return resolve();
   });
 
-const receive = ({ socket, source, sdpOffer }) =>
+const connect = ({ socket, source, sdpOffer }) =>
   new Promise(async (resolve, reject) => {
     logger.log(
-      `[ROUND TABLE] Socket <${socket.id}> - Receive Source: ${source}`
+      `[ROUND TABLE] Socket <${socket.id}> - Connect Source: ${source}`
     );
 
     let webRtcEndpoint = null;
@@ -273,18 +202,49 @@ const receive = ({ socket, source, sdpOffer }) =>
 
       let target = null;
       switch (source) {
-        // case "composite":
-        //   if (knight.hubPorts[source]) {
-        //     knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);
-        //     target = true;
-        //   } else target = false;
-        //   break;
+        case "me":
+          if (knight.hubPorts["dispatcher"]) {
+            knight.webRtcEndpoints["me"].connect(knight.hubPorts["dispatcher"]);
+          }
+
+          // if (knight.hubPorts["composite"]) {
+          //   knight.webRtcEndpoints["me"].connect(knight.hubPorts["composite"]);
+          // }
+
+          for (let socketId in table.knights) {
+            if (socketId !== socket.id) {
+              const listener = getKnight(socketId);
+              if (listener.id === table.king.id)
+                listener.send({
+                  id: "knightJoined",
+                  knight: knight.toObject(),
+                  seatNumber: knight.seatNumber,
+                });
+              else
+                listener.send({
+                  id: "knightJoined",
+                  knight: knight.toObject(),
+                });
+            }
+          }
+
+          target = true;
+          break;
+
         case "dispatcher":
           if (knight.hubPorts[source]) {
             knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);
             target = true;
           } else target = false;
           break;
+
+        // case "composite":
+        //   if (knight.hubPorts[source]) {
+        //     knight.hubPorts[source].connect(knight.webRtcEndpoints[source]);
+        //     target = true;
+        //   } else target = false;
+        //   break;
+
         default:
           target = getKnight(source);
           if (target && target.webRtcEndpoints["me"]) {
@@ -309,7 +269,7 @@ const receive = ({ socket, source, sdpOffer }) =>
       } else {
         knight.webRtcEndpoints[source].release();
         knight.webRtcEndpoints[source] = null;
-        return reject("Source not exists");
+        return reject(`Source <${source}> not exists`);
       }
     } catch (error) {
       leave({ socket });
@@ -446,12 +406,12 @@ const onIceCandidate = ({ socket, source, candidate: _candidate }) => {
 
 module.exports = {
   reserve,
-  release,
+  // release,
   join,
   leave,
-  receive,
-  onIceCandidate,
+  connect,
   changeSource,
   generateSeats,
   kickout,
+  onIceCandidate,
 };

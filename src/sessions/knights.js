@@ -14,7 +14,7 @@ const getKnight = (socketId) => {
   return _knights[socketId];
 };
 
-function Knight({ socket, name, table }) {
+function Knight({ socket, name, table, seatNumber }) {
   const self = this;
   logger.log(`[KNIGHT] Knight <${socket.id}> - Register`);
 
@@ -24,6 +24,7 @@ function Knight({ socket, name, table }) {
   self.id = socket.id;
   self.name = name;
   self.tableId = table.id;
+  self.seatNumber = seatNumber;
   self.candidatesQueue = {};
   self.webRtcEndpoints = {};
   self.webRtcEndpointIds = {};
@@ -90,6 +91,7 @@ Knight.prototype.lean = function () {
     id: self.id,
     name: self.name,
     tableId: self.tableId,
+    seatNumber: self.seatNumber,
     webRtcEndpointIds: self.webRtcEndpointIds,
     hubPortIds: self.hubPortIds,
   };
@@ -103,6 +105,7 @@ Knight.prototype.toObject = function () {
     id: self.id,
     name: self.name,
     tableId: self.tableId,
+    seatNumber: self.seatNumber,
   };
 };
 
