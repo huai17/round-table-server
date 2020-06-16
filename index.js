@@ -12,6 +12,10 @@ require("./src/services/signal");
 
 app.use(cors());
 
+app.get("/", (req, res) => {
+  res.send("Round Table Server 🦄");
+});
+
 // port setting
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
