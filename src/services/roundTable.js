@@ -221,13 +221,15 @@ const connect = ({ socket, source, sdpOffer }) =>
 
       let target = null;
       switch (source) {
-        case "me":
+        case "self":
           if (knight.hubPorts["dispatcher"]) {
-            knight.webRtcEndpoints["me"].connect(knight.hubPorts["dispatcher"]);
+            knight.webRtcEndpoints["self"].connect(
+              knight.hubPorts["dispatcher"]
+            );
           }
 
           // if (knight.hubPorts["composite"]) {
-          //   knight.webRtcEndpoints["me"].connect(knight.hubPorts["composite"]);
+          //   knight.webRtcEndpoints["self"].connect(knight.hubPorts["composite"]);
           // }
 
           for (let socketId in table.knights) {
@@ -266,8 +268,8 @@ const connect = ({ socket, source, sdpOffer }) =>
 
         default:
           target = getKnight(source);
-          if (target && target.webRtcEndpoints["me"]) {
-            target.webRtcEndpoints["me"].connect(
+          if (target && target.webRtcEndpoints["self"]) {
+            target.webRtcEndpoints["self"].connect(
               knight.webRtcEndpoints[source]
             );
             target = true;
@@ -310,7 +312,7 @@ const changeSource = ({ socket, source }) =>
     if (!table || !table.dispatcher || !table.king || table.king.id !== king.id)
       return resolve();
 
-    if (source === "me") {
+    if (source === "self") {
       if (!king.hubPortIds["dispatcher"]) return resolve();
 
       // set host as dispatcher source
@@ -329,7 +331,7 @@ const changeSource = ({ socket, source }) =>
       const knight = getKnight(socketId);
       knight.send({
         id: "changeSource",
-        source: source === "me" ? king.id : source,
+        source: source === "self" ? king.id : source,
       });
     }
     return resolve();
