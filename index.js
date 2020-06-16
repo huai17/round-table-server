@@ -6,9 +6,10 @@ const cors = require("cors");
 const app = express();
 const http = require("http");
 const server = http.createServer(app);
+const io = require("socket.io")(server, { pingTimeout: 60000 });
 
-require("./src/utils/socketIo").setIo(server);
-require("./src/services/signal");
+// require("./src/utils/socketIo").setIo(server);
+require("./src/services/signal")(io);
 
 app.use(cors());
 
