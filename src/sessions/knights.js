@@ -1,5 +1,5 @@
 const logger = require("../utils/logger");
-// const io = require("../utils/socketIo").getIo();
+const io = require("../utils/socketIo").getIo();
 
 const _knights = {};
 
@@ -37,7 +37,7 @@ Knight.prototype.send = function (message) {
   const self = this;
   logger.log(`[KNIGHT] Knight <${self.id}> - Send Message: ${message.id}`);
 
-  // io.to(self.id).send(message);
+  io.to(self.id).send(message);
 };
 
 Knight.prototype.setWebRtcEndpoint = function ({ source, webRtcEndpoint }) {
