@@ -1,4 +1,3 @@
-const socketId = require("socket.io");
 const redisAdapter = require("socket.io-redis");
 const { REDIS_URI } = require("../configs/keys");
 
@@ -8,8 +7,8 @@ const getIo = () => _io;
 
 const setIo = (server) => {
   if (_io) return;
-  const io = socketId(server, { pingTimeout: 60000 });
-  io.adapter(redisAdapter({ host: REDIS_URI, port: 6379 }));
+  const io = require("socket.io")(server, { pingTimeout: 60000 });
+  // io.adapter(redisAdapter({ host: REDIS_URI, port: 6379 }));
   _io = io;
 };
 
