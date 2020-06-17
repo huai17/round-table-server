@@ -1,5 +1,5 @@
 const logger = require("../utils/logger");
-const io = require("../utils/socketIo").getIo();
+const io = require("../utils/socketIo").getNameSpace("/roundTable");
 
 const _knights = {};
 

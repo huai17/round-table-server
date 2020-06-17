@@ -136,6 +136,19 @@ Table.prototype.join = function ({ knight, king }) {
   }
 };
 
+Table.prototype.connect = function ({ knight }) {
+  const self = this;
+  if (knight) {
+    logger.log(`[TABLE] Table <${self.id}> - Knight <${knight.id}> connected`);
+
+    if (!self.knights[knight.id]) throw new Error("Knight not joined");
+
+    self.knights[knight.id].isConnected = true;
+  } else {
+    throw new Error("No member connected");
+  }
+};
+
 Table.prototype.leave = function ({ socketId }) {
   const self = this;
   logger.log(`[TABLE] Table <${self.id}> - Knight <${socketId}> Left`);

@@ -8,7 +8,9 @@ const getIo = () => _io;
 const setIo = (server) => {
   if (_io) return;
   _io = require("socket.io")(server, { pingTimeout: 60000 });
-  // _io.adapter(redisAdapter({ host: REDIS_URI, port: 6379 }));
+  _io.adapter(redisAdapter({ host: REDIS_URI, port: 6379 }));
 };
 
-module.exports = { getIo, setIo };
+const getNameSpace = (nsp) => _io.of(nsp);
+
+module.exports = { getIo, setIo, getNameSpace };

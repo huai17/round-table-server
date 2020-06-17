@@ -1,4 +1,4 @@
-const io = require("../utils/socketIo").getIo();
+const io = require("../utils/socketIo").getNameSpace("/roundTable");
 const logger = require("../utils/logger");
 const {
   reserve,

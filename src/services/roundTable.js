@@ -119,6 +119,23 @@ const join = ({ socket, seatNumber, name }) =>
       knight.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
+      for (let socketId in table.knights) {
+        if (socketId !== socket.id) {
+          const listener = getKnight(socketId);
+          if (listener.id === table.king.id)
+            listener.send({
+              id: "knightJoined",
+              knight: knight.toObject(),
+              seatNumber: knight.seatNumber,
+            });
+          else
+            listener.send({
+              id: "knightJoined",
+              knight: knight.toObject(),
+            });
+        }
+      }
+
       return resolve(table.toObject(false));
     } catch (error) {
       if (table) table.leave({ socketId: socket.id });
@@ -232,20 +249,14 @@ const connect = ({ socket, source, sdpOffer }) =>
           //   knight.webRtcEndpoints["self"].connect(knight.hubPorts["composite"]);
           // }
 
+          table.connect({ knight });
           for (let socketId in table.knights) {
             if (socketId !== socket.id) {
               const listener = getKnight(socketId);
-              if (listener.id === table.king.id)
-                listener.send({
-                  id: "knightJoined",
-                  knight: knight.toObject(),
-                  seatNumber: knight.seatNumber,
-                });
-              else
-                listener.send({
-                  id: "knightJoined",
-                  knight: knight.toObject(),
-                });
+              listener.send({
+                id: "knightConnected",
+                knight: knight.toObject(),
+              });
             }
           }
 
