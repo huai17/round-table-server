@@ -45,8 +45,6 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> Reserve Error: `);
-            logger.error(error);
             socket.send({
               id: "error",
               message: `Fail to reserve table`,
@@ -74,8 +72,6 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> Join Error: `);
-            logger.error(error);
             socket.send({
               id: "error",
               message: `Fail to join table`,
@@ -99,8 +95,6 @@ io.on("connect", (socket) => {
             });
           })
           .catch((error) => {
-            logger.error(`[Error] Socket <${socket.id}> Connect Error: `);
-            logger.error(error);
             socket.send({
               id: "connectResponse",
               response: "fail",

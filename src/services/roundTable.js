@@ -1,5 +1,6 @@
 const kurento = require("kurento-client");
 const logger = require("../utils/logger");
+const io = require("../utils/socketIo").getNameSpace("/roundTable");
 const {
   createMediaPipeline,
   createWebRtcEndPoint,
@@ -43,7 +44,7 @@ const reserve = ({ socket, name = "Knight", numberOfSeats = 10 }) =>
         name: `${name}#admin`,
         table,
       });
-      table.join({ king });
+      await table.join({ king });
 
       // hubPort = await createHubPort(table.composite);
       // king.setHubPort({ source: "composite", hubPort });
@@ -109,7 +110,7 @@ const join = ({ socket, seatNumber, name }) =>
         table,
         seatNumber,
       });
-      table.join({ knight });
+      await table.join({ knight });
 
       // hubPort = await createHubPort(table.composite);
       // king.setHubPort({ source: "composite", hubPort });
@@ -119,22 +120,10 @@ const join = ({ socket, seatNumber, name }) =>
       knight.setHubPort({ source: "dispatcher", hubPort });
       hubPort = null;
 
-      for (let socketId in table.knights) {
-        if (socketId !== socket.id) {
-          const listener = getKnight(socketId);
-          if (listener.id === table.king.id)
-            listener.send({
-              id: "knightJoined",
-              knight: knight.toObject(),
-              seatNumber: knight.seatNumber,
-            });
-          else
-            listener.send({
-              id: "knightJoined",
-              knight: knight.toObject(),
-            });
-        }
-      }
+      socket.to(table.id).send({
+        id: "knightJoined",
+        knight: knight.toObject(),
+      });
 
       return resolve(table.toObject(false));
     } catch (error) {
@@ -171,33 +160,28 @@ const leave = ({ socket }) =>
           sourceChanged = true;
         }
       }
-      table.leave({ socketId: socket.id });
+      await table.leave({ socketId: socket.id });
+
+      if (sourceChanged)
+        io.in(table.id).send({
+          id: "changeSource",
+          source: table.king.id,
+        });
+
+      io.in(table.id).send({
+        id: "knightLeft",
+        knight: knight.toObject(),
+        isRemoved: false,
+      });
+
       for (let socketId in table.knights) {
         const listener = getKnight(socketId);
         if (listener) {
-          if (sourceChanged)
-            listener.send({
-              id: "changeSource",
-              source: table.king.id,
-            });
-
           if (listener.webRtcEndpoints[socket.id]) {
             listener.webRtcEndpoints[socket.id].release();
             delete listener.webRtcEndpoints[socket.id];
             delete listener.webRtcEndpointIds[socket.id];
           }
-          if (listener.id === table.king.id)
-            listener.send({
-              id: "knightLeft",
-              knight: knight.toObject(),
-              seatNumber: knight.seatNumber,
-              isRemoved: false,
-            });
-          else
-            listener.send({
-              id: "knightLeft",
-              knight: knight.toObject(),
-            });
         }
       }
     }
@@ -250,15 +234,10 @@ const connect = ({ socket, source, sdpOffer }) =>
           // }
 
           table.connect({ knight });
-          for (let socketId in table.knights) {
-            if (socketId !== socket.id) {
-              const listener = getKnight(socketId);
-              listener.send({
-                id: "knightConnected",
-                knight: knight.toObject(),
-              });
-            }
-          }
+          socket.to(table.id).send({
+            id: "knightConnected",
+            knight: knight.toObject(),
+          });
 
           target = true;
           break;
@@ -338,13 +317,11 @@ const changeSource = ({ socket, source }) =>
       table.changeSource(target.id);
     }
 
-    for (let socketId in table.knights) {
-      const knight = getKnight(socketId);
-      knight.send({
-        id: "changeSource",
-        source: source === "self" ? king.id : source,
-      });
-    }
+    io.in(table.id).send({
+      id: "changeSource",
+      source: source === "self" ? king.id : source,
+    });
+
     return resolve();
   });
 
@@ -397,35 +374,29 @@ const kickout = ({ socket, seatNumber }) =>
 
       sourceChanged = true;
     }
-    table.leave({ socketId: knight.id });
-    table.removeSeat({ seatNumber });
+    await table.leave({ socketId: knight.id, remove: true });
+    // table.removeSeat({ seatNumber });
+
+    if (sourceChanged)
+      io.in(table.id).send({
+        id: "changeSource",
+        source: table.king.id,
+      });
+
+    io.in(table.id).send({
+      id: "knightLeft",
+      knight: knight.toObject(),
+      isRemoved: true,
+    });
+
     for (let socketId in table.knights) {
       const listener = getKnight(socketId);
       if (listener) {
-        if (sourceChanged)
-          listener.send({
-            id: "changeSource",
-            source: king.id,
-          });
-
         if (listener.webRtcEndpoints[knight.id]) {
           listener.webRtcEndpoints[knight.id].release();
           delete listener.webRtcEndpoints[knight.id];
           delete listener.webRtcEndpointIds[knight.id];
         }
-
-        if (listener.id === table.king.id)
-          listener.send({
-            id: "knightLeft",
-            knight: knight.toObject(),
-            seatNumber,
-            isRemoved: true,
-          });
-        else
-          listener.send({
-            id: "knightLeft",
-            knight: knight.toObject(),
-          });
       }
     }
 

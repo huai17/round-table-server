@@ -1,5 +1,7 @@
 const crypto = require("crypto");
 const logger = require("../utils/logger");
+const { resolve } = require("path");
+const io = require("../utils/socketIo").getNameSpace("/roundTable");
 
 const _tables = {};
 
@@ -111,12 +113,14 @@ Table.prototype.changeSource = function (source) {
 
 Table.prototype.join = function ({ knight, king }) {
   const self = this;
+  let socketId = null;
   if (king) {
     logger.log(`[TABLE] Table <${self.id}> - King <${king.id}> Joined`);
 
     self.king = { id: king.id, name: king.name };
     self.knights[king.id] = { id: king.id, name: king.name };
     self.source = king.id;
+    socketId = king.id;
   } else if (knight) {
     logger.log(`[TABLE] Table <${self.id}> - Knight <${knight.id}> Joined`);
 
@@ -131,9 +135,17 @@ Table.prototype.join = function ({ knight, king }) {
       seatNumber: knight.seatNumber,
     };
     self.seats[knight.seatNumber] = knight.id;
+    socketId = knight.id;
   } else {
     throw new Error("No member joined");
   }
+
+  return new Promise((resolve, reject) => {
+    io.adapter.remoteJoin(socketId, self.id, (error) => {
+      if (error) return reject(error);
+      return resolve();
+    });
+  });
 };
 
 Table.prototype.connect = function ({ knight }) {
@@ -149,7 +161,7 @@ Table.prototype.connect = function ({ knight }) {
   }
 };
 
-Table.prototype.leave = function ({ socketId }) {
+Table.prototype.leave = function ({ socketId, remove }) {
   const self = this;
   logger.log(`[TABLE] Table <${self.id}> - Knight <${socketId}> Left`);
 
@@ -158,9 +170,16 @@ Table.prototype.leave = function ({ socketId }) {
   const seatNumber = self.knights[socketId].seatNumber;
 
   if (self.seats[seatNumber] === self.knights[socketId].id)
-    self.seats[seatNumber] = "available";
+    self.seats[seatNumber] = remove ? "removed" : "available";
 
   delete self.knights[socketId];
+
+  return new Promise((resolve, reject) => {
+    io.adapter.remoteLeave(socketId, self.id, (error) => {
+      if (error) logger.error(error);
+      return resolve();
+    });
+  });
 };
 
 Table.prototype.release = function () {
