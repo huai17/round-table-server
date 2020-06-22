@@ -80,12 +80,10 @@ const release = ({ socket }) =>
     if (!table) return resolve();
     if (!table.king || table.king.id !== king.id) return resolve();
     table.release();
+    io.in(table.id).send({ id: "stopCommunication" });
     for (let socketId in table.knights) {
       const knight = getKnight(socketId);
-      if (knight) {
-        knight.send({ id: "stopCommunication" });
-        knight.unregister();
-      }
+      if (knight) knight.unregister();
     }
     return resolve();
   });
@@ -421,6 +419,19 @@ const onIceCandidate = ({ socket, source, candidate: _candidate }) => {
   }
 };
 
+const chat = ({ socket, message }) => {
+  const knight = getKnight(socket.id);
+  if (knight) {
+    const table = getTable(knight.tableId);
+    if (table)
+      socket.to(table.id).send({
+        id: "chat",
+        knight: knight.toObject(),
+        message,
+      });
+  }
+};
+
 module.exports = {
   reserve,
   // release,
@@ -431,4 +442,5 @@ module.exports = {
   generateSeats,
   kickout,
   onIceCandidate,
+  chat,
 };

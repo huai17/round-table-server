@@ -10,6 +10,7 @@ const {
   generateSeats,
   kickout,
   onIceCandidate,
+  chat,
 } = require("./roundTable");
 
 io.on("connect", (socket) => {
@@ -125,6 +126,10 @@ io.on("connect", (socket) => {
           source: message.source,
           candidate: message.candidate,
         });
+        break;
+
+      case "chat":
+        chat({ socket, message: message.message });
         break;
 
       default:
