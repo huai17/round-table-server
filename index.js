@@ -1,6 +1,6 @@
 require("dotenv").config();
 const logger = require("./src/utils/logger");
-logger.setMode("debug");
+// logger.setMode("debug");
 const express = require("express");
 const cors = require("cors");
 const app = express();
