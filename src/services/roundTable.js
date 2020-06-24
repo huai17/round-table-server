@@ -1,4 +1,5 @@
 const kurento = require("kurento-client");
+const { v4: uuidv4 } = require("uuid");
 const logger = require("../utils/logger");
 const io = require("../utils/socketIo").getNameSpace("/roundTable");
 const {
@@ -423,12 +424,17 @@ const chat = ({ socket, message }) => {
   const knight = getKnight(socket.id);
   if (knight) {
     const table = getTable(knight.tableId);
-    if (table)
-      socket.to(table.id).send({
+    if (table) {
+      const uuid = uuidv4();
+      const timestamp = new Date().getTime();
+      io.in(table.id).send({
         id: "chat",
+        uuid,
+        timestamp,
         knight: knight.toObject(),
         message,
       });
+    }
   }
 };
 
